@@ -7,6 +7,7 @@ from datetime import date
 import scraperwiki
 from slackclient import SlackClient
 from os import environ
+import hashlib
 
 
 def crawl(token, channel):
@@ -37,8 +38,9 @@ def crawl(token, channel):
                 file_name = pdf_url.split('/')[-1]
                 year , month, day = d.split("-")
                 existed = False
+                key = hashlib.md5(pdf_url.encode('utf-8')).hexdigest()
                 try:
-                    existed = len(scraperwiki.sqlite.select('* from data where InvitationId = %d' % key)) > 0
+                    existed = len(scraperwiki.sqlite.select('* from data where hash = "%s"' % key)) > 0
                 except:
                     pass
                 if existed:
@@ -48,7 +50,8 @@ def crawl(token, channel):
                     'year': year,
                     'month': month,
                     'day': day,
-                    'url': pdf_url
+                    'url': pdf_url,
+                    'hash': key
                 }
                 text = "New Hansard is available at %s." % (pdf_url)
                 slack.api_call(
@@ -57,7 +60,7 @@ def crawl(token, channel):
                         text=text
                 )
                 print("new PDF url %s" % pdf_url)
-                scraperwiki.sqlite.save(unique_keys=[key], data=data)
+                scraperwiki.sqlite.save(unique_keys=['hash'], data=data)
 
 
 TOKEN = environ['MORPH_TOKEN']
