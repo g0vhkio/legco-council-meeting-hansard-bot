@@ -1,0 +1,8 @@
+-e git+http://github.com/andylolz/scraperwiki-python.git@morph_defaults#egg=scraperwiki
+
+requests==2.18.4
+pytz==2017.3
+pillow==5.2.0
+slackclient==1.2.0
+textwrap3==0.9.1
+lxml==4.1.1
