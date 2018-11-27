@@ -45,6 +45,7 @@ def crawl(token, channel):
                     pass
                 if existed:
                     continue
+                key = pdf_url
                 data = {
                     'year': year,
                     'month': month,
