@@ -8,9 +8,32 @@ import scraperwiki
 from slackclient import SlackClient
 from os import environ
 import hashlib
+import simplejson as json
 
 
-def crawl(token, channel):
+def get_json_from_url(url):
+    call_url = "https://hansard-parser.g0vhk.io/parse"
+    body = {'url': url}
+    r = requests.post(call_url, json=body)
+    return r.json()
+
+
+def create_image(data): 
+    print(data.keys())
+
+
+def upload_hansard(hansard_json, legco_api_token):
+    headers = {'Content-Type': 'application/json', 'Authorization': 'Token ' + legco_api_token}
+    print(hansard_json)
+    r = requests.put("https://api.g0vhk.io/legco/upsert_hansard/", json=hansard_json, headers=headers)
+    print(r.json())
+    if r.ok:
+        print('Uploaded.')
+    else:
+        print('Upload error.')
+
+
+def crawl(token, channel, legco_api_token):
     today = date.today()
     year = today.year
     if today.month < 10:
@@ -53,15 +76,24 @@ def crawl(token, channel):
                     'hash': key
                 }
                 text = "New Hansard is available at %s." % (pdf_url)
-                slack.api_call(
-                        "chat.postMessage",
-                        channel=channel,
-                        text=text
-                )
+                hansard_json = get_json_from_url(pdf_url)
+                if channel:
+                    slack.api_call(
+                            "chat.postMessage",
+                            channel=channel,
+                            text=text
+                    )
+                else:
+                    print('Skipping Slack')
+                if legco_api_token:
+                    upload_hansard(hansard_json, legco_api_token)
+                else:
+                    print('Skipping upsert')
                 print("new PDF url %s" % pdf_url)
                 scraperwiki.sqlite.save(unique_keys=['hash'], data=data)
 
 
-TOKEN = environ['MORPH_TOKEN']
-CHANNEL = environ['MORPH_CHANNEL']
-crawl(TOKEN, CHANNEL)
+TOKEN = environ.get('MORPH_TOKEN', None)
+CHANNEL = environ.get('MORPH_CHANNEL', None)
+LEGCO_API_TOKEN = environ.get('MORPH_LEGCO_API_TOKEN', None)
+crawl(TOKEN, CHANNEL, LEGCO_API_TOKEN)
